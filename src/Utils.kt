@@ -14,3 +14,13 @@ fun readInput(name: String) = File("src", "$name.txt")
 fun String.md5() = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteArray()))
     .toString(16)
     .padStart(32, '0')
+
+
+fun assert(answer: Any, expected: Any){
+    if (answer == expected){
+        println("\uD83D\uDFE2 $answer")
+    }
+    else {
+        println("\uD83D\uDD34 Expected $expected but found $answer")
+    }
+}

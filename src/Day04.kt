@@ -27,8 +27,8 @@ fun main() {
     }
 
     val testInput = readInput("Day04_test").map { parse(it) }
-    println(part1(testInput))
-    println(part2(testInput))
+    assert(part1(testInput), 2)
+    assert(part2(testInput), 4)
 
     val input = readInput("Day04").map { parse(it) }
     println(part1(input))
