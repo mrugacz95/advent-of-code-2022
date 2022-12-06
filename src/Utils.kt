@@ -16,7 +16,7 @@ fun String.md5() = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteA
     .padStart(32, '0')
 
 
-fun assert(answer: Any, expected: Any){
+fun <T> assert(answer: T, expected: T){
     if (answer == expected){
         println("\uD83D\uDFE2 $answer")
     }
