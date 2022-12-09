@@ -15,3 +15,4 @@ fun main() {
     assert(part2(testInput), 1)
     println(part2(input))
 }
+// Time: 00:XX
