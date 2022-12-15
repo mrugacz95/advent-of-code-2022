@@ -13,59 +13,59 @@ private data class Vertex(
         return this.steps - other.steps
     }
 
-
     override fun toString(): String {
         return "Vertex(x=$x, y=$y, height=$height, steps=$steps)"
     }
 }
 
-private data class Graph(val vertices: List<List<Vertex>>, val start: Vertex, val end: Vertex)
+private data class Graph(val vertices: List<List<Vertex>>, val start: List<Vertex>, val end: Vertex)
+
+private val COLORS = (231 downTo 226).toList() +
+        (190 downTo 46 step 36).toList() +
+        (47..51).toList() +
+        (87..195 step 36).toList() +
+        (194 downTo 191).toList() +
+        listOf(155, 119)
 
 private fun Graph.print() {
-    for (line in vertices) {
-        for (v in line) {
-            if (v.prev == null) {
-                print('.')
-            } else {
-                val c = when {
-                    v.x - 1 == v.prev?.x -> '<'
-                    v.x + 1 == v.prev?.x -> '>'
-                    v.y - 1 == v.prev?.y -> '^'
-                    v.y + 1 == v.prev?.y -> 'V'
-                    else -> throw Exception("Unkonwm")
-                }
-                print(c)
-            }
-        }
-        println()
+    val result = Array(vertices.size) {
+        Array(vertices[it].size) { "." }
     }
-    println()
-}
+    var vertex = end
+    while (true) {
+        val prev = vertex.prev ?: break
+        val c = when {
+            prev.x - 1 == vertex.x -> "<"
+            prev.x + 1 == vertex.x -> ">"
+            prev.y - 1 == vertex.y -> "^"
+            prev.y + 1 == vertex.y -> "V"
+            else -> throw Exception("Unknown")
+        }
+        result[prev.y][prev.x] = "\u001b[38;5;${167}m\u001B[1m$c\u001b[0m"
+        vertex = prev
+    }
 
-private fun Graph.flip(): Graph {
-    val newVertices = vertices.map { line -> line.map { it.copy() } }
-    for (line in vertices) {
-        for (v in line) {
-            for (n in v.neighbours) {
-                newVertices[n.y][n.x].neighbours.add(newVertices[v.y][v.x])
-            }
-        }
+    result[end.y][end.x] = "\u001b[38;5;${167}m" + "E"
+    vertices.flatten().map {
+        val h = it.height - 'a'
+
+        result[it.y][it.x] = "\u001b[48;5;${COLORS[h]}m" + result[it.y][it.x] + "\u001b[0m"
     }
-    return this.copy(vertices = newVertices)
+    println(result.joinToString("\n") { it.joinToString("") })
 }
 
 private fun Graph.dijkstra() {
     val queue = PriorityQueue<Vertex>()
     val visited = HashSet<Vertex>()
-    queue.add(this.start)
-    this.start.steps = 0
+    queue.addAll(this.start)
+    this.start.map { it.steps = 0 }
     while (queue.isNotEmpty()) {
         val current = queue.poll()
         if (current in visited) continue
         visited.add(current)
         for (neighbour in current.neighbours) {
             if (neighbour in visited) continue
-            neighbour.steps = current.steps + 1
+            neighbour.steps = min(neighbour.steps, current.steps + 1)
             neighbour.prev = current
             queue.add(neighbour)
         }
@@ -98,45 +98,23 @@ fun main() {
                 }
             }
         }
-        return Graph(vertices, start, end)
+        return Graph(vertices, listOf(start), end)
     }
 
     fun part1(input: List<String>): Int {
         val graph = input.parse()
-        val queue = PriorityQueue<Vertex>()
-        val visited = HashSet<Vertex>()
-        queue.add(graph.start)
-        graph.start.steps = 0
-        while (queue.isNotEmpty()) {
-            val current = queue.poll()
-            if (current in visited) continue
-            visited.add(current)
-            for (neighbour in current.neighbours) {
-                if (neighbour in visited) continue
-                neighbour.steps = current.steps + 1
-                neighbour.prev = current
-                queue.add(neighbour)
-            }
-        }
-//        graph.print()
+        graph.dijkstra()
+        graph.print()
         return graph.end.steps
     }
 
     fun part2(input: List<String>): Int {
-        val graph = input.parse()
-        var result = Int.MAX_VALUE
-        for (y in graph.vertices.indices) {
-            for (x in graph.vertices[y].indices) {
-                if (graph.vertices[y][x].height == 'a') {
-                    var currentGraph = input.parse()
-                    currentGraph = currentGraph.copy(start = currentGraph.vertices[y][x])
-                    currentGraph.dijkstra()
-                    val steps = currentGraph.end.steps
-                    result = min(steps, result)
-                }
-            }
+        val graph = input.parse().let {
+            val aVertices = it.vertices.flatten().filter { v -> v.height == 'a' }
+            it.copy(start = aVertices)
         }
-        return result
+        graph.dijkstra()
+        return graph.end.steps
     }
 
     val testInput = readInput("Day12_test")
