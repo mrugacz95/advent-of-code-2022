@@ -1,7 +1,7 @@
 import java.util.Stack
 import kotlin.math.max
 
-const val DEBUG = false
+private const val DEBUG = false
 private sealed class InnerItem
 private data class InnerNumber(val value: Int) : InnerItem() {
     override fun toString(): String {
