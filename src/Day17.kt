@@ -191,8 +191,8 @@ fun main() {
                     }
                 }
             }
-            blockTravels.add( pos to calcTowerHeight(well))
-//                well.print(block, pos)
+            blockTravels.add(pos to calcTowerHeight(well))
+            if (blockId == 4L) well.print(block, pos)
             val nextBlock = blocks[((blockId + 1) % blocks.size).toInt()]
             val towerHeight = calcTowerHeight(well)
             val expectedLines = towerHeight + 3 + 1 + nextBlock.height
@@ -208,23 +208,25 @@ fun main() {
                 droppedLines += 1
             }
             blockId += 1
-            if (blockId.toLong() == numberOfBlocks) {
+            if (blockId == numberOfBlocks) {
                 break
             }
             if (droppedLines >= 1 && !jumpedToFuture && blockTravels.size > moves.size) {
-                val somehash = blockTravels.slice(blockTravels.size-moves.size until  blockTravels.size).map { it.first }.hashCode()
+                val firstHash = blockTravels
+                        .slice(blockTravels.size - moves.size until blockTravels.size)
+                        .map { it.first }.hashCode()
                 for (interval in 1..moves.size) {
-                    val otherhash = blockTravels.slice(blockTravels.size-moves.size - interval until blockTravels.size - interval).map { it.first }.hashCode()
-                    if (otherhash == somehash) {
-                        val firstOccurence = blockTravels[blockTravels.size-moves.size - interval]
-                        val lastOccurence =  blockTravels[blockTravels.size-moves.size]
-                        val intervalTowerHeight = lastOccurence.second - firstOccurence.second
-                        val intervalAddedBlocks = interval
-                        val lackingIntervals = (numberOfBlocks - blockId ) / intervalAddedBlocks
+                    val lastHash = blockTravels
+                            .slice(blockTravels.size - moves.size - interval until blockTravels.size - interval)
+                            .map { it.first }.hashCode()
+                    if (lastHash == firstHash) {
+                        val firstOccurrence = blockTravels[blockTravels.size - moves.size - interval]
+                        val lastOccurrence = blockTravels[blockTravels.size - moves.size]
+                        val intervalTowerHeight = lastOccurrence.second - firstOccurrence.second
+                        val lackingIntervals = (numberOfBlocks - blockId) / interval
                         blockId += lackingIntervals * interval
                         droppedLines += intervalTowerHeight * lackingIntervals
                         jumpedToFuture = true
-                        println("jumped to $blockId")
                         break
                     }
                 }
@@ -250,4 +252,4 @@ fun main() {
     assert(part2(testInput), 1514285714288)
     println(part2(input))
 }
-// Time: 00:XX
+// Time: 02:30
