@@ -128,3 +128,4 @@ fun main() {
     assert(part2(testInput), 1707)
     println(part2(input))
 }
+// Time: 08:00
