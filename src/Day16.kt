@@ -1,5 +1,7 @@
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
 private const val START = "AA"
 private const val DEBUG = true
@@ -61,7 +63,7 @@ private fun solveReleasingPressure(graph: Map<String, Valve>, allowedValves: Lis
 
 private fun <T> Set<T>.allSplits() = sequence<Pair<Set<T>, Set<T>>> {
     if (size > 32) error("set is too big")
-    val maxBitMask = (1 shl size + 1) - 1
+    val maxBitMask = ((1 shl size + 1) - 1) / 2 + 1
     var mask = 0
     val items = toList()
     while (mask < maxBitMask) {
@@ -83,6 +85,7 @@ private fun <T> Set<T>.allSplits() = sequence<Pair<Set<T>, Set<T>>> {
     println()
 }
 
+@OptIn(ExperimentalTime::class)
 fun main() {
     fun List<String>.parse(): Map<String, Valve> {
         val regex =
@@ -121,11 +124,13 @@ fun main() {
     }
 
     val testInput = readInput("Day16_test")
-
-    val input = readInput("Day16")
-    assert(part1(testInput), 1651)
-    println(part1(input))
-    assert(part2(testInput), 1707)
-    println(part2(input))
+    val time  = measureTime {
+        val input = readInput("Day16")
+        assert(part1(testInput), 1651)
+        println(part1(input))
+        assert(part2(testInput), 1707)
+        println(part2(input))
+    }
+    println("Exec time: $time")
 }
 // Time: 08:00
