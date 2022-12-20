@@ -1,10 +1,14 @@
 fun main() {
+    fun List<String>.parse() : List<String> {
+        return this
+    }
+
     fun part1(input: List<String>): Int {
-        return input.size
+        return input.parse().size
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        return input.parse().size
     }
 
     val testInput = readInput("Day0X_test")
