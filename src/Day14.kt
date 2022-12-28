@@ -5,8 +5,6 @@ private fun List<List<Char>>.print() {
     println(joinToString("\n") { it.joinToString("") })
 }
 
-private data class Pos(var y: Int, var x: Int)
-
 fun main() {
     fun List<String>.parse(): Triple<MutableList<MutableList<Char>>, Pair<Int, Int>, Pair<Int, Int>> {
         val lines = map {
@@ -46,7 +44,7 @@ fun main() {
     ): Int {
         var units = 0
         while (true) {
-            val sand = Pos(0, 500)
+            var sand = Pos(0, 500)
             units += 1
             while (true) {
                 if (finishCondition(sand)) {
@@ -56,17 +54,15 @@ fun main() {
                     break
                 }
                 if (cave[sand.y + 1 - yPos.first][sand.x - xPos.first] == ' ') {
-                    sand.y += 1
+                    sand += Pos(1, 0)
                     continue
                 }
                 if (cave[sand.y + 1 - yPos.first][sand.x - 1 - xPos.first] == ' ') {
-                    sand.y += 1
-                    sand.x -= 1
+                    sand += Pos(1, -1)
                     continue
                 }
                 if (cave[sand.y + 1 - yPos.first][sand.x + 1 - xPos.first] == ' ') {
-                    sand.y += 1
-                    sand.x += 1
+                    sand += Pos(1,1)
                     continue
                 }
                 break
