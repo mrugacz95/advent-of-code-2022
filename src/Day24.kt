@@ -71,7 +71,7 @@ private fun getNextState(valley: Valley): Valley {
     return valley.copy(blizzards = result)
 }
 
-private typealias DijkstraNode = Triple<Int, Pos, Int>
+private typealias DijkstraNode = Triple<Int, Pos, Int> // dist, pos, time
 
 fun main() {
     fun List<String>.parse(): Valley {
@@ -100,7 +100,7 @@ fun main() {
     }
 
     fun simulate(valley: Valley, entrance: Pos, exit: Pos, startTime: Int, debug: Boolean = false): Int {
-        val queue = PriorityQueue<DijkstraNode> { o1, o2 -> // dist, pos, time
+        val queue = PriorityQueue<DijkstraNode> { o1, o2 ->
             o1.third - o2.third
         }
         val timeDimension = mutableListOf(valley)
@@ -190,4 +190,4 @@ fun main() {
     assert(part2(testInput), 54)
     println(part2(input))
 }
-// Time: 02:30
+// Time: 02:40
