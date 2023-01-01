@@ -1,46 +1,25 @@
 import java.util.LinkedList
-import kotlin.math.abs
-
-data class Vec3d(val z: Int, val y: Int, val x: Int) : Comparable<Vec3d> {
-    operator fun plus(other: Vec3d): Vec3d {
-        return Vec3d(z + other.z, y + other.y, x + other.x)
-    }
-
-    override fun compareTo(other: Vec3d): Int {
-        if (z != other.z)
-            return z.compareTo(other.z)
-        if (y != other.y)
-            return y.compareTo(other.y)
-        if (x != other.x)
-            return x.compareTo(other.x)
-        return 0
-    }
-
-    fun dist(other: Vec3d): Int {
-        return abs(z - other.z) + abs(y - other.y) + abs(x - other.x)
-    }
-}
 
 private val neighbours = listOf(
-    Vec3d(1, 0, 0),
-    Vec3d(-1, 0, 0),
-    Vec3d(0, 1, 0),
-    Vec3d(0, -1, 0),
-    Vec3d(0, 0, 1),
-    Vec3d(0, 0, -1),
+    Vec3(1, 0, 0),
+    Vec3(-1, 0, 0),
+    Vec3(0, 1, 0),
+    Vec3(0, -1, 0),
+    Vec3(0, 0, 1),
+    Vec3(0, 0, -1),
 )
 
-private fun vectorInRange(vector: Vec3d, space: List<List<List<Boolean>>>): Boolean {
+private fun vectorInRange(vector: Vec3, space: List<List<List<Boolean>>>): Boolean {
     return vector.z in space.indices &&
             vector.y in space[vector.z].indices &&
             vector.x in space[vector.z][vector.y].indices
 }
 
 fun main() {
-    fun List<String>.parse(): List<Vec3d> {
+    fun List<String>.parse(): List<Vec3> {
         return map { line ->
             val (z, y, x) = line.split(",").map { it.toInt() }
-            Vec3d(x, y, z)
+            Vec3(x, y, z)
         }.sorted()
     }
 
@@ -59,11 +38,11 @@ fun main() {
         return visibleSides
     }
 
-    fun BFS3d(space: List<List<List<Boolean>>>): Set<Vec3d> {
-        val start = Vec3d(0, 0, 0)
-        val queue = LinkedList<Vec3d>()
+    fun BFS3d(space: List<List<List<Boolean>>>): Set<Vec3> {
+        val start = Vec3(0, 0, 0)
+        val queue = LinkedList<Vec3>()
         queue.add(start)
-        val visited = mutableSetOf<Vec3d>()
+        val visited = mutableSetOf<Vec3>()
         while (!queue.isEmpty()) {
             val current = queue.pop()
             if (current in visited) continue
@@ -119,7 +98,7 @@ fun main() {
         for (z in space.indices) {
             for (y in space.first().indices) {
                 for (x in space.first().first().indices) {
-                    space[z][y][x] = Vec3d(z, y, x) !in visited
+                    space[z][y][x] = Vec3(z, y, x) !in visited
                 }
             }
         }
@@ -130,7 +109,7 @@ fun main() {
                 for (x in space.first().first().indices) {
                     for (n in neighbours) {
                         if (space[z][y][x]) {
-                            val other = Vec3d(z + n.z, y + n.y, x + n.x)
+                            val other = Vec3(z + n.z, y + n.y, x + n.x)
                             if (vectorInRange(other, space)) {
                                 if (!space[other.z][other.y][other.x]) {
                                     visibleSides += 1
