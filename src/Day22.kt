@@ -1,8 +1,49 @@
 import Direction.*
+import java.util.Deque
+import java.util.LinkedList
 
 private const val DEBUG = false
+private val cubeModel: List<List<Triple<Int, Direction, Boolean>?>> = listOf(
+    listOf(
+        Triple(4, DOWN, true),
+        Triple(2, DOWN, false),
+        Triple(1, DOWN, false),
+        Triple(3, DOWN, true),
+    ), // 0
+    listOf(
+        Triple(0, RIGHT, false),
+        Triple(5, RIGHT, true),
+        Triple(4, LEFT, false),
+        Triple(2, RIGHT, false),
+    ), // 1
+    listOf(
+        Triple(0, UP, false),
+        Triple(5, DOWN, false),
+        Triple(1, LEFT, false),
+        Triple(3, RIGHT, false),
+    ), // 2
+    listOf(
+        Triple(0, LEFT, true),
+        Triple(5, LEFT, false),
+        Triple(2, LEFT, false),
+        Triple(4, RIGHT, false),
+    ), // 3
+    listOf(
+        Triple(0, DOWN, true),
+        Triple(5, UP, true),
+        Triple(3, LEFT, false),
+        Triple(1, RIGHT, false),
+    ), // 4
+    listOf(
+        Triple(2, UP, false),
+        Triple(4, UP, true),
+        Triple(1, UP, true),
+        Triple(3, UP, false),
+    ) // 5
+)
 
-private val testEdgeConnection: List<List<Triple<Int, Direction, Boolean>?>> = listOf(
+
+private val testEdgeConnection1: List<List<Triple<Int, Direction, Boolean>?>> = listOf(
     listOf(
         Triple(1, DOWN, true),
         Triple(3, DOWN, false),
@@ -39,46 +80,6 @@ private val testEdgeConnection: List<List<Triple<Int, Direction, Boolean>?>> = l
         Triple(4, LEFT, false),
         Triple(0, RIGHT, true),
     ) // 5
-)
-
-// up, down, left, right
-private val problemEdgeConnection: List<List<Triple<Int, Direction, Boolean>?>> = listOf(
-    listOf(
-        Triple(5, RIGHT, false),
-        null,
-        Triple(3, RIGHT, true),
-        null,
-    ), // 0
-    listOf(
-        Triple(5, UP, false),
-        Triple(2, LEFT, false),
-        null,
-        Triple(4, LEFT, true),
-    ), // 1
-    listOf(
-        null,
-        null,
-        Triple(3, DOWN, false),
-        Triple(1, UP, false),
-    ), // 2
-    listOf(
-        Triple(2, RIGHT, false),
-        null,
-        Triple(0, RIGHT, true),
-        null
-    ), // 3
-    listOf(
-        null,
-        Triple(5, LEFT, false),
-        null,
-        Triple(1, LEFT, true),
-    ), // 4
-    listOf(
-        null,
-        Triple(1, DOWN, false),
-        Triple(0, DOWN, false),
-        Triple(4, UP, false),
-    ), // 5
 )
 
 private data class Tile(
@@ -127,6 +128,20 @@ fun parseMoves(moves: String): List<Pair<Char, Int>> =
             it.first() to 0
         }
     }.toList()
+
+private fun List<List<Tile>>.rotateRight(): List<List<Tile>> {
+    return MutableList(this.size) { y ->
+        MutableList(this.size) { x ->
+            this[this.size - x - 1][y]
+        }
+    }
+}
+
+private fun List<List<Tile>>.rotateLeft() = rotateRight().rotateRight().rotateRight()
+
+private fun <T> List<List<T>>.hasPos(pos: Pos): Boolean {
+    return pos.y in indices && pos.x in this[pos.y].indices
+}
 
 fun main() {
     fun List<String>.parse(): Triple<MutableMap<Pos, Tile>, List<Pair<Char, Int>>, Tile> {
@@ -201,7 +216,7 @@ fun main() {
         println()
     }
 
-    fun walk(start: Tile, moves: List<Pair<Char, Int>>, tiles: MutableMap<Pos, Tile>, debug : Boolean = false): Int {
+    fun walk(start: Tile, moves: List<Pair<Char, Int>>, tiles: MutableMap<Pos, Tile>, debug: Boolean = false): Int {
         var position = start
         var direction = RIGHT
         for ((move, length) in moves) {
@@ -232,6 +247,7 @@ fun main() {
                 }
             }
         }
+        println("final pos $position")
         return (position.y + 1) * 1000 + (position.x + 1) * 4 + direction.value()
     }
 
@@ -265,42 +281,157 @@ fun main() {
                 }
             }
         }
+        if (DEBUG) {
+            for ((squareId, square) in squares) {
+                println("Square: $squareId")
+                println(square.joinToString("\n") { line ->
+                    line.joinToString("") {
+                        if (it.wall)
+                            "#"
+                        else
+                            "."
+                    }
+                })
+            }
+        }
+        // map input squares to cube model with horizontal-cross shape
+        var zeroPos: Pos? = null
+        outer@ for (y in cubeMap.indices) {
+            for (x in cubeMap[y].indices) {
+                if (cubeMap[y][x] == 0) {
+                    zeroPos = Pos(y, x)
+                    break@outer
+                }
+            }
+        }
+        val startPos = zeroPos ?: error("Cant find zero pos in cube")
+        val horizontalCrossSquares: MutableMap<Int, List<List<Tile>>> = mutableMapOf()
+        horizontalCrossSquares[0] = squares[0] ?: error("Zero square not present") // Zero is well oriented
+        val queue: Deque<Triple<Pos, Int, Int>> = LinkedList()
+        queue.add(Triple(startPos, 0, 0))
+        val visited = mutableSetOf<Int>()
+        val inputFacesToCrossFaces = mutableMapOf<Int, Int>()
+        inputFacesToCrossFaces[0] = 0
+        while (queue.isNotEmpty()) {
+            val (current, expectedSquareId, prevRotated) = queue.pop()
+            val inputSquareId = cubeMap[current.y][current.x] ?: error("Cube face not found")
+            visited.add(inputSquareId)
+            for ((directionId, moveDirection) in Direction.values().withIndex()) {
+                val neighbourPos = current + moveDirection.delta
+                if (!cubeMap.hasPos(neighbourPos)) {
+                    continue
+                }
+                val neighbourSquareId = cubeMap[neighbourPos.y][neighbourPos.x] ?: continue
+                if (neighbourSquareId in visited) {
+                    continue
+                }
+                var squareDirection = moveDirection
 
-        // connect adjacent
-        for ((pos, tile) in tiles) {
-            for (dir in Direction.values()) {
-                tiles[pos + dir.delta]?.let { neighbour ->
-                    tile.neighbours[dir] = neighbour
-                    tile.neighboursOrientation[dir] = dir
+                var withPrevRot = Direction.values()[directionId]
+
+                var horizontalCrossSquare = squares[neighbourSquareId] ?: error("Square Not found")
+
+                for (i in 0 until  prevRotated) {
+                    squareDirection = squareDirection.left()
+                    withPrevRot = withPrevRot.right()
+                    horizontalCrossSquare = horizontalCrossSquare.rotateLeft()
+                }
+                val dirIdWithPrevRot = Direction.values().indexOf(withPrevRot)
+
+                val expected = cubeModel[expectedSquareId][dirIdWithPrevRot] ?: error("connection not found in cube model")
+                println("Going from $expectedSquareId ($inputSquareId) $withPrevRot ($prevRotated) and expecting ${expected.first} but found $neighbourSquareId")
+                var rotatedTimes = prevRotated
+                while (expected.second != squareDirection) {
+                    squareDirection = squareDirection.right()
+                    horizontalCrossSquare = horizontalCrossSquare.rotateRight()
+//                        println("rotated $inputSquareId right")
+                    rotatedTimes += 1
+                }
+                if (expected.first in horizontalCrossSquares) {
+                    error("square ${expected.first} already writen")
+                }
+                horizontalCrossSquares[expected.first] = horizontalCrossSquare
+                println("$neighbourSquareId is ${expected.first} rotated $rotatedTimes times")
+                inputFacesToCrossFaces[expected.first] = neighbourSquareId
+                queue.add(Triple(neighbourPos, expected.first, rotatedTimes))
+            }
+        }
+        if (testData) {
+            for (y in 0 until 4) {
+                for (x in 0 until 4)
+                    print(" ")
+                for (x in 0 until 4)
+                    print(if (horizontalCrossSquares[0]!![y][x].wall) "#" else ".")
+                println()
+            }
+            println()
+            for (y in 0 until 4) {
+                for (tileId in 1..4) {
+                    for (x in 0 until 4)
+                        print(if (horizontalCrossSquares[tileId]!![y][x].wall) "#" else ".")
+                    print(" ")
+                }
+                println()
+            }
+            println()
+            for (y in 0 until 4) {
+                for (x in 0 until 4)
+                    print(" ")
+                for (x in 0 until 4)
+                    print(if (horizontalCrossSquares[5]!![y][x].wall) "#" else ".")
+                println()
+            }
+        }
+        if (DEBUG) println("horizontal cross has ${horizontalCrossSquares.size} sides")
+
+        // connect adjacent in square
+        for (square in horizontalCrossSquares.values) {
+            for (y in square.indices) {
+                for (x in square[y].indices) {
+                    val pos = Pos(y, x)
+                    val tile = square[y][x]
+                    for (dir in Direction.values()) {
+                        val neighbourPos = pos + dir.delta
+                        if (!square.hasPos(neighbourPos)) {
+                            continue
+                        }
+                        square[neighbourPos.y][neighbourPos.x].let { neighbour ->
+                            tile.neighbours[dir] = neighbour
+                            tile.neighboursOrientation[dir] = dir
+                        }
+                    }
                 }
             }
         }
 
         fun getEdges(squareId: Int, edge: Direction): List<Tile> {
-            val face = squares[squareId] ?: error("Face not present")
-            val x = face.flatten().map { it.x }
-            val y = face.flatten().map { it.y }
-            val minX = x.min()
-            val maxX = x.max()
-            val minY = y.min()
-            val maxY = y.max()
-            val left = face.flatten().filter { it.x == minX }
-            val right = face.flatten().filter { it.x == maxX }
-            val top = face.flatten().filter { it.y == minY }
-            val down = face.flatten().filter { it.y == maxY }
+            val face = horizontalCrossSquares[squareId] ?: error("Face not present")
+//            val x = face.flatten().map { it.x }
+//            val y = face.flatten().map { it.y }
+//            val minX = x.min()
+//            val maxX = x.max()
+//            val minY = y.min()
+//            val maxY = y.max()
+//            val left = face.flatten().filter { it.x == minX }
+//            val right = face.flatten().filter { it.x == maxX }
+//            val top = face.flatten().filter { it.y == minY }
+//            val down = face.flatten().filter { it.y == maxY }
             return when (edge) {
-                UP -> top
-                DOWN -> down
-                LEFT -> left
-                RIGHT -> right
+                UP -> {
+                    face.first()
+                }
+
+                DOWN -> {
+                    face.last()
+                }
+
+                LEFT -> face.map { it.first() }
+                RIGHT -> face.map { it.last() }
             }
         }
 
-        val edgeConnection = if (testData) {
-            testEdgeConnection
-        } else {
-            problemEdgeConnection
-        }
+        val edgeConnection = cubeModel
+
 
         for ((fromNode, listOfEdges) in edgeConnection.withIndex()) {
             for ((edge, outDir) in listOfEdges.zip(Direction.values())) {
@@ -309,7 +440,7 @@ fun main() {
                 }
                 val (inNode, inDir, reverse) = edge
                 val toBeConnectedFrom = getEdges(fromNode, outDir)
-                val toBeConnectedTo = getEdges(inNode, inDir.opposite()).let { it ->
+                val toBeConnectedTo = getEdges(inNode, inDir.opposite()).let {
                     if (reverse) {
                         it.reversed()
                     } else {
@@ -320,6 +451,9 @@ fun main() {
                     if (DEBUG) {
                         println("connecting $outTile $outDir -> $inTile $inDir")
                     }
+                    if (outTile.neighbours[outDir] != null){
+                        error("tiles already connected")
+                    }
                     outTile.neighbours[outDir] = inTile
                     outTile.neighboursOrientation[outDir] = inDir
                 }
@@ -327,9 +461,16 @@ fun main() {
         }
 
         // check if connection was correct
-        if (tiles.values.any { tile -> Direction.values().any { dir -> dir !in tile.neighbours } }) {
-            error("Unconnected tile")
+        var err = false
+        for (tile in tiles.values) {
+            for (dir in Direction.values()) {
+                if (tile.neighbours[dir] == null) {
+                    err = true
+                    println("Unconnected tile $tile with dir $dir")
+                }
+            }
         }
+        if (err) error("Unconnected tiles found")
 
         if (DEBUG) println(cubeMap.joinToString("\n") { line -> line.joinToString("") { it?.toString() ?: " " } })
 
@@ -337,16 +478,17 @@ fun main() {
         return Triple(tiles, parsedMoves, start)
     }
 
-    fun part2(input: List<String>, testData: Boolean = false, debug : Boolean = false): Int {
+    fun part2(input: List<String>, testData: Boolean = false, debug: Boolean = false): Int {
         val (tiles, parsedMoves, start) = input.parseForPart2(testData = testData)
+        println("start pos $start")
         return walk(start, parsedMoves, tiles, debug)
     }
 
     val testInput = readInput("Day22_test")
 
     val input = readInput("Day22")
-    assert(part1(testInput), 6032)
-    println(part1(input))
+//    assert(part1(testInput), 6032)
+//    println(part1(input))
     assert(part2(testInput, testData = true, debug = DEBUG), 5031)
     println(part2(input))
 }
