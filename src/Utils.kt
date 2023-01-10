@@ -40,18 +40,30 @@ enum class Direction(val delta: Pos) {
     LEFT(Pos(0, -1)),
     RIGHT(Pos(0, 1));
 
-    fun right() = when (this) {
-        UP -> RIGHT
-        DOWN -> LEFT
-        LEFT -> UP
-        RIGHT -> DOWN
+    fun right(times: Int = 1): Direction {
+        var rotated = this
+        for (i in 0 until times % 4) {
+            rotated = when (rotated) {
+                UP -> RIGHT
+                DOWN -> LEFT
+                LEFT -> UP
+                RIGHT -> DOWN
+            }
+        }
+        return rotated
     }
 
-    fun left() = when (this) {
-        UP -> LEFT
-        DOWN -> RIGHT
-        LEFT -> DOWN
-        RIGHT -> UP
+    fun left(times: Int = 1): Direction {
+        var rotated = this
+        for (i in 0 until times % 4) {
+            rotated = when (rotated) {
+                UP -> LEFT
+                DOWN -> RIGHT
+                LEFT -> DOWN
+                RIGHT -> UP
+            }
+        }
+        return rotated
     }
 
     fun opposite() = when (this) {

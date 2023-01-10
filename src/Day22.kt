@@ -3,82 +3,76 @@ import java.util.Deque
 import java.util.LinkedList
 
 private const val DEBUG = false
-private val cubeModel: List<List<Triple<Int, Direction, Boolean>?>> = listOf(
-    listOf(
-        Triple(4, DOWN, true),
-        Triple(2, DOWN, false),
-        Triple(1, DOWN, false),
-        Triple(3, DOWN, true),
-    ), // 0
-    listOf(
-        Triple(0, RIGHT, false),
-        Triple(5, RIGHT, true),
-        Triple(4, LEFT, false),
-        Triple(2, RIGHT, false),
-    ), // 1
-    listOf(
-        Triple(0, UP, false),
-        Triple(5, DOWN, false),
-        Triple(1, LEFT, false),
-        Triple(3, RIGHT, false),
-    ), // 2
-    listOf(
-        Triple(0, LEFT, true),
-        Triple(5, LEFT, false),
-        Triple(2, LEFT, false),
-        Triple(4, RIGHT, false),
-    ), // 3
-    listOf(
-        Triple(0, DOWN, true),
-        Triple(5, UP, true),
-        Triple(3, LEFT, false),
-        Triple(1, RIGHT, false),
-    ), // 4
-    listOf(
-        Triple(2, UP, false),
-        Triple(4, UP, true),
-        Triple(1, UP, true),
-        Triple(3, UP, false),
-    ) // 5
-)
 
+/*
+    Model describes all edges in cube:
+         +---+
+         | 0 |
+     +---+---+---+---+
+     | 1 | 2 | 3 | 4 |
+     +---+---+---+---+
+         | 5 |
+         +---+
+    List contains definition for every cube face. Each definition
+    contains 4 edges up, down, left, right. Edge is defined with 3
+    constants: connected face id, direction on connected face after
+    crossing edge, information if edge is connected in reverse order.
 
-private val testEdgeConnection1: List<List<Triple<Int, Direction, Boolean>?>> = listOf(
-    listOf(
-        Triple(1, DOWN, true),
-        Triple(3, DOWN, false),
-        Triple(2, DOWN, false),
-        Triple(5, LEFT, false),
+    For example when going from face 0 in direction up we obtain edge
+    with cubeMap[0][Direction.values().indexOf(Direction.UP)] which is
+    Triple(4, DOWN, true),. That means that face 0 and 3 are connected in
+    such way:
+
+    +---+---+
+    | 0 | m||
+    +---+---+
+    (3 is rotated left)
+
+    or as connected from 3 perspective:
+
+    +---+
+    ||0 |
+    +---+
+    | 3 |
+    +---+
+    (0 is rotated right)
+ */
+private val cubeModel: List<Map<Direction, Triple<Int, Direction, Boolean>?>> = listOf(
+    mapOf(
+        UP to Triple(4, DOWN, true),
+        DOWN to Triple(2, DOWN, false),
+        LEFT to Triple(1, DOWN, false),
+        RIGHT to Triple(3, DOWN, true),
     ), // 0
-    listOf(
-        Triple(0, DOWN, true),
-        Triple(4, UP, false),
-        Triple(5, UP, false),
-        Triple(2, RIGHT, false)
+    mapOf(
+        UP to Triple(0, RIGHT, false),
+        DOWN to Triple(5, RIGHT, true),
+        LEFT to Triple(4, LEFT, false),
+        RIGHT to Triple(2, RIGHT, false),
     ), // 1
-    listOf(
-        Triple(0, RIGHT, false),
-        Triple(4, RIGHT, true),
-        Triple(1, LEFT, false),
-        Triple(3, RIGHT, false),
+    mapOf(
+        UP to Triple(0, UP, false),
+        DOWN to Triple(5, DOWN, false),
+        LEFT to Triple(1, LEFT, false),
+        RIGHT to Triple(3, RIGHT, false),
     ), // 2
-    listOf(
-        Triple(0, UP, false),
-        Triple(4, DOWN, false),
-        Triple(2, LEFT, false),
-        Triple(5, DOWN, true),
+    mapOf(
+        UP to Triple(0, LEFT, true),
+        DOWN to Triple(5, LEFT, false),
+        LEFT to Triple(2, LEFT, false),
+        RIGHT to Triple(4, RIGHT, false),
     ), // 3
-    listOf(
-        Triple(3, UP, false),
-        Triple(1, UP, true),
-        Triple(2, UP, true),
-        Triple(5, RIGHT, false),
+    mapOf(
+        UP to Triple(0, DOWN, true),
+        DOWN to Triple(5, UP, true),
+        LEFT to Triple(3, LEFT, false),
+        RIGHT to Triple(1, RIGHT, false),
     ), // 4
-    listOf(
-        Triple(3, LEFT, true),
-        Triple(1, RIGHT, false),
-        Triple(4, LEFT, false),
-        Triple(0, RIGHT, true),
+    mapOf(
+        UP to Triple(2, UP, false),
+        DOWN to Triple(4, UP, true),
+        LEFT to Triple(1, UP, true),
+        RIGHT to Triple(3, UP, false),
     ) // 5
 )
 
@@ -86,7 +80,8 @@ private data class Tile(
     val y: Int, val x: Int,
     val wall: Boolean,
     val neighbours: MutableMap<Direction, Tile> = mutableMapOf(),
-    val neighboursOrientation: MutableMap<Direction, Direction> = mutableMapOf()
+    val neighboursOrientation: MutableMap<Direction, Direction> = mutableMapOf(),
+    var endRotation: Int = 0, // some tiles are rotated during bending, and has to be rotated again to get final direction
 ) {
     override fun toString(): String {
         return "Tile(y=$y, x=$x, neighbours=${neighbours.size})"
@@ -129,15 +124,12 @@ fun parseMoves(moves: String): List<Pair<Char, Int>> =
         }
     }.toList()
 
-private fun List<List<Tile>>.rotateRight(): List<List<Tile>> {
-    return MutableList(this.size) { y ->
+private fun List<List<Tile>>.rotateRight(): List<List<Tile>> =
+    MutableList(this.size) { y ->
         MutableList(this.size) { x ->
             this[this.size - x - 1][y]
         }
     }
-}
-
-private fun List<List<Tile>>.rotateLeft() = rotateRight().rotateRight().rotateRight()
 
 private fun <T> List<List<T>>.hasPos(pos: Pos): Boolean {
     return pos.y in indices && pos.x in this[pos.y].indices
@@ -247,8 +239,8 @@ fun main() {
                 }
             }
         }
-        println("final pos $position")
-        return (position.y + 1) * 1000 + (position.x + 1) * 4 + direction.value()
+        if (DEBUG) println("final pos $position with direction $direction")
+        return (position.y + 1) * 1000 + (position.x + 1) * 4 + direction.left(position.endRotation).value()
     }
 
     fun part1(input: List<String>): Int {
@@ -261,7 +253,7 @@ fun main() {
         val (map, moves) = joinToString("\n").split("\n\n")
         val splitMap = map.split("\n")
         val edgeLength = splitMap.minOfOrNull { line -> line.count { it != ' ' } } ?: error("Edge length not found")
-        val cubeMap = List(7) { MutableList<Int?>(7) { null } }
+        val cubeMap = mutableMapOf<Pos, Int>()
         val squares = mutableMapOf<Int, List<List<Tile>>>()
         val (tiles, start) = parseTiles(map)
         for (y in splitMap.indices step edgeLength) {
@@ -276,8 +268,8 @@ fun main() {
                         }
                     }
                     squares[squareId] = tileSquare
-                    val pos = Pos(y / edgeLength + 3, x / edgeLength + 3)
-                    cubeMap[pos.y][pos.x] = squareId
+                    val pos = Pos(y / edgeLength, x / edgeLength)
+                    cubeMap[pos] = squareId
                 }
             }
         }
@@ -294,69 +286,61 @@ fun main() {
                 })
             }
         }
-        // map input squares to cube model with horizontal-cross shape
-        var zeroPos: Pos? = null
-        outer@ for (y in cubeMap.indices) {
-            for (x in cubeMap[y].indices) {
-                if (cubeMap[y][x] == 0) {
-                    zeroPos = Pos(y, x)
-                    break@outer
-                }
-            }
-        }
-        val startPos = zeroPos ?: error("Cant find zero pos in cube")
+        // map input cube to cube model with horizontal-cross shape
+        val startPos = cubeMap.keys.filter { it.y == 0 }.minByOrNull { it.x } ?: error("Cant find zero pos in cube")
         val horizontalCrossSquares: MutableMap<Int, List<List<Tile>>> = mutableMapOf()
-        horizontalCrossSquares[0] = squares[0] ?: error("Zero square not present") // Zero is well oriented
+        horizontalCrossSquares[0] = squares[0] ?: error("Start square not present") // Start is well oriented
+        // Queue contains: position in input cubeMap, expected square id in horizontal-cross model, previous square times of rotation
         val queue: Deque<Triple<Pos, Int, Int>> = LinkedList()
         queue.add(Triple(startPos, 0, 0))
         val visited = mutableSetOf<Int>()
-        val inputFacesToCrossFaces = mutableMapOf<Int, Int>()
-        inputFacesToCrossFaces[0] = 0
         while (queue.isNotEmpty()) {
             val (current, expectedSquareId, prevRotated) = queue.pop()
-            val inputSquareId = cubeMap[current.y][current.x] ?: error("Cube face not found")
+            val inputSquareId = cubeMap[current] ?: error("Cube face not found")
             visited.add(inputSquareId)
-            for ((directionId, moveDirection) in Direction.values().withIndex()) {
+            for (moveDirection in Direction.values()) { // go in every direction
                 val neighbourPos = current + moveDirection.delta
-                if (!cubeMap.hasPos(neighbourPos)) {
+                if (neighbourPos !in cubeMap) {
                     continue
                 }
-                val neighbourSquareId = cubeMap[neighbourPos.y][neighbourPos.x] ?: continue
+                val neighbourSquareId = cubeMap[neighbourPos] ?: continue
                 if (neighbourSquareId in visited) {
                     continue
                 }
                 var squareDirection = moveDirection
-
-                var withPrevRot = Direction.values()[directionId]
-
                 var horizontalCrossSquare = squares[neighbourSquareId] ?: error("Square Not found")
 
-                for (i in 0 until  prevRotated) {
-                    squareDirection = squareDirection.left()
-                    withPrevRot = withPrevRot.right()
-                    horizontalCrossSquare = horizontalCrossSquare.rotateLeft()
-                }
-                val dirIdWithPrevRot = Direction.values().indexOf(withPrevRot)
+                val directionWithPrevRot = moveDirection.right(prevRotated)
 
-                val expected = cubeModel[expectedSquareId][dirIdWithPrevRot] ?: error("connection not found in cube model")
-                println("Going from $expectedSquareId ($inputSquareId) $withPrevRot ($prevRotated) and expecting ${expected.first} but found $neighbourSquareId")
-                var rotatedTimes = prevRotated
-                while (expected.second != squareDirection) {
-                    squareDirection = squareDirection.right()
-                    horizontalCrossSquare = horizontalCrossSquare.rotateRight()
-//                        println("rotated $inputSquareId right")
-                    rotatedTimes += 1
-                }
-                if (expected.first in horizontalCrossSquares) {
+                // we also look at horizontal-cross cube model and see which square is expected to occur
+                val expected = cubeModel[expectedSquareId][directionWithPrevRot] ?: error("connection not found in cube model")
+
+                if (expected.first in horizontalCrossSquares) { // we should visit every expected square once
                     error("square ${expected.first} already writen")
                 }
-                horizontalCrossSquares[expected.first] = horizontalCrossSquare
-                println("$neighbourSquareId is ${expected.first} rotated $rotatedTimes times")
-                inputFacesToCrossFaces[expected.first] = neighbourSquareId
+
+                if (DEBUG) {
+                    println(
+                        "Going from $expectedSquareId ($inputSquareId) $directionWithPrevRot ($prevRotated) " +
+                                "and expecting ${expected.first} but found $neighbourSquareId"
+                    )
+                }
+                var rotatedTimes = 0
+                while (expected.second != squareDirection) { // rotate input square to match h-cross model
+                    squareDirection = squareDirection.right()
+                    horizontalCrossSquare = horizontalCrossSquare.rotateRight()
+                    rotatedTimes += 1
+                }
+
+                // save squares rotation to adjust final direction
+                horizontalCrossSquare.flatten().map { it.endRotation = rotatedTimes }
+
+                if (DEBUG) println("$neighbourSquareId is ${expected.first} rotated $rotatedTimes times")
+                horizontalCrossSquares[expected.first] = horizontalCrossSquare // save mapped square
                 queue.add(Triple(neighbourPos, expected.first, rotatedTimes))
             }
         }
-        if (testData) {
+        if (testData && DEBUG) {
             for (y in 0 until 4) {
                 for (x in 0 until 4)
                     print(" ")
@@ -382,7 +366,6 @@ fun main() {
                 println()
             }
         }
-        if (DEBUG) println("horizontal cross has ${horizontalCrossSquares.size} sides")
 
         // connect adjacent in square
         for (square in horizontalCrossSquares.values) {
@@ -406,52 +389,32 @@ fun main() {
 
         fun getEdges(squareId: Int, edge: Direction): List<Tile> {
             val face = horizontalCrossSquares[squareId] ?: error("Face not present")
-//            val x = face.flatten().map { it.x }
-//            val y = face.flatten().map { it.y }
-//            val minX = x.min()
-//            val maxX = x.max()
-//            val minY = y.min()
-//            val maxY = y.max()
-//            val left = face.flatten().filter { it.x == minX }
-//            val right = face.flatten().filter { it.x == maxX }
-//            val top = face.flatten().filter { it.y == minY }
-//            val down = face.flatten().filter { it.y == maxY }
             return when (edge) {
-                UP -> {
-                    face.first()
-                }
-
-                DOWN -> {
-                    face.last()
-                }
-
+                UP -> face.first()
+                DOWN -> face.last()
                 LEFT -> face.map { it.first() }
                 RIGHT -> face.map { it.last() }
             }
         }
 
-        val edgeConnection = cubeModel
-
-
-        for ((fromNode, listOfEdges) in edgeConnection.withIndex()) {
-            for ((edge, outDir) in listOfEdges.zip(Direction.values())) {
+        // connect edges according to h-cross cube model
+        for ((fromNode, listOfEdges) in cubeModel.withIndex()) {
+            for ((outDir, edge) in listOfEdges) {
                 if (edge == null) {
                     continue
                 }
                 val (inNode, inDir, reverse) = edge
                 val toBeConnectedFrom = getEdges(fromNode, outDir)
-                val toBeConnectedTo = getEdges(inNode, inDir.opposite()).let {
+                val toBeConnectedTo : List<Tile> = getEdges(inNode, inDir.opposite()).toMutableList().also {
                     if (reverse) {
-                        it.reversed()
-                    } else {
-                        it
+                        it.reverse()
                     }
                 }
                 for ((outTile, inTile) in toBeConnectedFrom.zip(toBeConnectedTo)) {
                     if (DEBUG) {
                         println("connecting $outTile $outDir -> $inTile $inDir")
                     }
-                    if (outTile.neighbours[outDir] != null){
+                    if (outTile.neighbours[outDir] != null) {
                         error("tiles already connected")
                     }
                     outTile.neighbours[outDir] = inTile
@@ -472,23 +435,20 @@ fun main() {
         }
         if (err) error("Unconnected tiles found")
 
-        if (DEBUG) println(cubeMap.joinToString("\n") { line -> line.joinToString("") { it?.toString() ?: " " } })
-
         val parsedMoves = parseMoves(moves)
         return Triple(tiles, parsedMoves, start)
     }
 
     fun part2(input: List<String>, testData: Boolean = false, debug: Boolean = false): Int {
         val (tiles, parsedMoves, start) = input.parseForPart2(testData = testData)
-        println("start pos $start")
         return walk(start, parsedMoves, tiles, debug)
     }
 
     val testInput = readInput("Day22_test")
 
     val input = readInput("Day22")
-//    assert(part1(testInput), 6032)
-//    println(part1(input))
+    assert(part1(testInput), 6032)
+    println(part1(input))
     assert(part2(testInput, testData = true, debug = DEBUG), 5031)
     println(part2(input))
 }
